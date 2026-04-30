@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.tailwindcss.com"></script>
+<title>Admin Login</title>
+
+<style>
+body{
+  background: linear-gradient(135deg,#0f172a,#1e293b);
+}
+
+/* Glass */
+.glass{
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+/* Smooth */
+*{transition: all 0.3s ease}
+
+/* Spinner */
+.loader{
+  border:3px solid rgba(255,255,255,0.3);
+  border-top:3px solid white;
+  border-radius:50%;
+  width:18px;
+  height:18px;
+  animation:spin 1s linear infinite;
+}
+@keyframes spin{
+  100%{transform:rotate(360deg)}
+}
+</style>
+</head>
+
+<body class="h-screen flex items-center justify-center text-white">
+
+<!-- LOGIN BOX -->
+<div class="glass p-8 rounded-2xl w-full max-w-sm shadow-xl">
+
+  <h1 class="text-2xl font-semibold mb-6 text-center">
+    Admin Login
+  </h1>
+
+  <!-- EMAIL -->
+  <input id="email"
+    type="email"
+    placeholder="Enter Email"
+    class="w-full mb-4 p-3 rounded-xl bg-white/10 outline-none border border-white/20 focus:border-blue-400">
+
+  <!-- PASSWORD -->
+  <input id="password"
+    type="password"
+    placeholder="Enter Password"
+    class="w-full mb-6 p-3 rounded-xl bg-white/10 outline-none border border-white/20 focus:border-blue-400">
+
+  <!-- BUTTON -->
+  <button id="loginBtn"
+    onclick="login()"
+    class="w-full bg-blue-500 py-3 rounded-xl font-semibold flex items-center justify-center gap-2">
+
+    <span id="btnText">Login</span>
+    <div id="loader" class="loader hidden"></div>
+
+  </button>
+
+  <!-- ERROR -->
+  <p id="errorMsg" class="text-red-400 text-sm mt-3 text-center hidden"></p>
+
+</div>
+
+<script type="module">
+
+/* 🔥 FIREBASE */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js";
+import {
+  getFirestore,
+  doc,
+  getDoc
+} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBfg_CmR3fWXz7U7R35nhRNCC243CqBXEQ",
+  authDomain: "crm-69c8a.firebaseapp.com",
+  projectId: "crm-69c8a",
+  storageBucket: "crm-69c8a.firebasestorage.app",
+  messagingSenderId: "309785361435",
+  appId: "1:309785361435:web:45bb7e8f74708cef410cbe"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+/* LOGIN */
+window.login = async function(){
+
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  const btnText = document.getElementById("btnText");
+  const loader = document.getElementById("loader");
+  const errorMsg = document.getElementById("errorMsg");
+
+  errorMsg.classList.add("hidden");
+
+  // UI loading
+  btnText.innerText="Logging...";
+  loader.classList.remove("hidden");
+
+  try{
+    const res = await signInWithEmailAndPassword(auth,email,password);
+
+    // 🔥 ROLE CHECK
+    const userDoc = await getDoc(doc(db,"users",res.user.uid));
+
+    if(!userDoc.exists()){
+      throw "User not found";
+    }
+
+    const userData = userDoc.data();
+
+    if(userData.role !== "admin"){
+      throw "Not authorized";
+    }
+
+    // ✅ SUCCESS → REDIRECT
+    window.location.href="admin.html";
+
+  }catch(err){
+
+    errorMsg.innerText = err.message || err;
+    errorMsg.classList.remove("hidden");
+
+    btnText.innerText="Login";
+    loader.classList.add("hidden");
+
+  }
+
+};
+
+/* AUTO REDIRECT */
+onAuthStateChanged(auth, async (user)=>{
+  if(user){
+    const docSnap = await getDoc(doc(db,"users",user.uid));
+    if(docSnap.exists() && docSnap.data().role==="admin"){
+      window.location.href="admin.html";
+    }
+  }
+});
+
+</script>
+
+</body>
+</html>
